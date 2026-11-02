@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f7fa">
+<title>Humanity AI</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#17212b;background:#f5f7fa}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;justify-content:center}
+main{width:min(940px,100%);padding:24px 18px;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:12px;padding:12px 4px 20px;border-bottom:1px solid #dfe5eb}
+.logo{width:42px;height:42px;border-radius:14px;background:#1769aa;color:white;display:grid;place-items:center;font-weight:800}
+h1{margin:0;font-size:24px;letter-spacing:-.7px}header p{margin:5px 0 0;color:#647383;font-size:13px}
+#chat{flex:1;padding:24px 0;display:flex;flex-direction:column;gap:14px}
+.msg{padding:14px 16px;border-radius:17px;max-width:88%;white-space:pre-wrap;line-height:1.55;overflow-wrap:anywhere}
+.user{align-self:flex-end;background:#dcecff}.bot{align-self:flex-start;background:white;border:1px solid #e5eaf0}
+form{display:flex;gap:10px;padding:14px 0 6px}
+textarea{flex:1;resize:vertical;min-height:58px;max-height:180px;border:1px solid #ccd5df;border-radius:15px;padding:15px;font:inherit;background:white}
+button{border:0;border-radius:14px;padding:0 22px;background:#1769aa;color:white;font-weight:650;font-size:15px;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}.toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.small{font-size:12px;color:#758392}.link{background:transparent;color:#526477;padding:7px 10px;font-size:12px}
+@media(max-width:600px){main{padding:14px 12px}.msg{max-width:95%}form{gap:7px}button{padding:0 15px}}
+</style></head>
+<body><main>
+<header><div class="logo">H</div><div><h1>Humanity AI</h1><p>Knowledge should be accessible to everyone.</p></div></header>
+<section id="chat" aria-live="polite"><div class="msg bot">Welcome to Humanity AI. This is an early community prototype. Ask a question to begin once a model server is connected.</div></section>
+<form id="form"><textarea id="message" placeholder="Message Humanity AI..." required maxlength="12000"></textarea><button id="send">Send</button></form>
+<div class="toolbar"><span class="small">Prototype v0.2 · This demo does not store conversations by default.</span><button class="link" id="clear" type="button">Clear chat</button></div>
+</main>
+<script>
+const form=document.querySelector('#form'),input=document.querySelector('#message'),chat=document.querySelector('#chat'),btn=document.querySelector('#send');
+const history=[];
+function bubble(text,who){const el=document.createElement('div');el.className='msg '+who;el.textContent=text;chat.appendChild(el);el.scrollIntoView({behavior:'smooth',block:'end'});return el;}
+form.addEventListener('submit',async e=>{e.preventDefault();const message=input.value.trim();if(!message)return;
+bubble(message,'user');input.value='';btn.disabled=true;const pending=bubble('Thinking…','bot');
+try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,history})});const data=await r.json();if(!r.ok)throw new Error(data.detail||'Request failed');pending.textContent=data.answer;history.push({role:'user',content:message},{role:'assistant',content:data.answer});}
+catch(err){pending.textContent='The model server is unavailable or returned an error. Check the deployment configuration. '+err.message;}
+finally{btn.disabled=false;input.focus();}
+});
+document.querySelector('#clear').addEventListener('click',()=>{history.length=0;chat.replaceChildren();bubble('Chat cleared. What would you like to explore?','bot');});
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
+</script></body></html>
