@@ -1,0 +1,61 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  model-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      MODEL_NAME: ${MODEL_NAME:-qwen3:4b}
+    entrypoint: ["/bin/sh", "-lc"]
+    command: ["ollama pull \"$$MODEL_NAME\""]
+    restart: "no"
+
+  humanity-ai:
+    build: .
+    environment:
+      APP_NAME: Humanity AI
+      MODEL_BASE_URL: http://ollama:11434/v1
+      MODEL_NAME: ${MODEL_NAME:-qwen3:4b}
+      MODEL_API_KEY: ${MODEL_API_KEY:-}
+      STORE_CONVERSATIONS: ${STORE_CONVERSATIONS:-false}
+      DATABASE_PATH: /data/humanity_ai.db
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-20}
+      AUTH_REQUIRED: ${AUTH_REQUIRED:-true}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env before starting}
+      AUTH_TOKEN_HOURS: ${AUTH_TOKEN_HOURS:-24}
+      MAX_MESSAGE_CHARS: ${MAX_MESSAGE_CHARS:-12000}
+      MAX_REQUEST_BYTES: ${MAX_REQUEST_BYTES:-256000}
+      MAX_HISTORY_MESSAGES: ${MAX_HISTORY_MESSAGES:-16}
+    depends_on:
+      model-init:
+        condition: service_completed_successfully
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - humanity_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  humanity_data:
+  ollama_models:

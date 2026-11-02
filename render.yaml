@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: humanity-ai
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: AUTH_REQUIRED
+        value: "true"
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /data/humanity_ai.db
+      - key: STORE_CONVERSATIONS
+        value: "false"
+      - key: MODEL_BASE_URL
+        sync: false
+      - key: MODEL_NAME
+        value: qwen3:4b
+    disk:
+      name: humanity-data
+      mountPath: /data
+      sizeGB: 1
