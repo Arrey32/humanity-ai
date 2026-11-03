@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f7fa">
+<meta name="description" content="Humanity AI — accessible AI assistance for everyone.">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<title>Humanity AI</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#17212b;background:#f5f7fa}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;justify-content:center}
+main{width:min(940px,100%);padding:24px 18px;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:12px;padding:12px 4px 20px;border-bottom:1px solid #dfe5eb}
+.logo{width:42px;height:42px;border-radius:14px;background:#1769aa;color:white;display:grid;place-items:center;font-weight:800}
+h1{margin:0;font-size:24px;letter-spacing:-.7px}header p{margin:5px 0 0;color:#647383;font-size:13px}
+#chat{flex:1;padding:24px 0;display:flex;flex-direction:column;gap:14px}
+.msg{padding:14px 16px;border-radius:17px;max-width:88%;white-space:pre-wrap;line-height:1.55;overflow-wrap:anywhere}
+.user{align-self:flex-end;background:#dcecff}.bot{align-self:flex-start;background:white;border:1px solid #e5eaf0}
+form{display:flex;gap:10px;padding:14px 0 6px}
+textarea{flex:1;resize:vertical;min-height:58px;max-height:180px;border:1px solid #ccd5df;border-radius:15px;padding:15px;font:inherit;background:white}
+button{border:0;border-radius:14px;padding:0 22px;background:#1769aa;color:white;font-weight:650;font-size:15px;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}.toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.small{font-size:12px;color:#758392}.link{background:transparent;color:#526477;padding:7px 10px;font-size:12px}
+@media(max-width:600px){main{padding:14px 12px}.msg{max-width:95%}form{gap:7px}button{padding:0 15px}}
+</style></head>
+<body><main>
+<header><div class="logo">H</div><div><h1>Humanity AI</h1><p>Knowledge should be accessible to everyone.</p></div></header>
+<section id="account" style="padding:12px 0;border-bottom:1px solid #e2e8ef">
+  <form id="account-form" style="display:flex;flex-wrap:wrap;gap:8px;padding:0">
+    <input id="email" type="email" placeholder="Email address" autocomplete="email" required style="min-width:180px;flex:1;padding:11px;border:1px solid #ccd5df;border-radius:10px">
+    <input id="password" type="password" placeholder="Password (12+ characters)" autocomplete="current-password" minlength="12" required style="min-width:180px;flex:1;padding:11px;border:1px solid #ccd5df;border-radius:10px">
+    <button id="account-submit" type="submit">Sign in</button>
+    <button id="register" type="button" class="link">Create account</button>
+    <button id="signout" type="button" class="link" hidden>Sign out</button>
+    <button id="delete-account" type="button" class="link" hidden>Delete account</button>
+  </form><p id="account-status" class="small" aria-live="polite">Guest mode. Create an account if this server requires sign-in.</p>
+</section>
+<section id="chat" aria-live="polite"><div class="msg bot">Welcome to Humanity AI. This is an early community prototype. Ask a question to begin once a model server is connected.</div></section>
+<form id="form"><textarea id="message" placeholder="Message Humanity AI..." required maxlength="12000"></textarea><button id="send">Send</button></form>
+<div class="toolbar"><span class="small">Humanity AI v0.6 · Conversations are not stored by default.</span><button class="link" id="clear" type="button">Clear chat</button></div>
+</main>
+<script>
+const form=document.querySelector('#form'),input=document.querySelector('#message'),chat=document.querySelector('#chat'),btn=document.querySelector('#send');
+const history=[];
+let token=sessionStorage.getItem('humanity_token')||'';
+const accountForm=document.querySelector('#account-form'), emailInput=document.querySelector('#email'), passwordInput=document.querySelector('#password'), accountStatus=document.querySelector('#account-status');
+function accountState(){document.querySelector('#signout').hidden=!token;document.querySelector('#delete-account').hidden=!token;document.querySelector('#account-submit').hidden=!!token;document.querySelector('#register').hidden=!!token;emailInput.hidden=!!token;passwordInput.hidden=!!token;accountStatus.textContent=token?'Signed in for this browser session.':'Guest mode. Create an account if this server requires sign-in.';}
+accountState();
+async function accountAction(path){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:emailInput.value,password:passwordInput.value})});const d=await r.json();if(!r.ok)throw new Error(d.detail||'Account request failed');token=d.token;sessionStorage.setItem('humanity_token',token);passwordInput.value='';accountState();}
+accountForm.addEventListener('submit',async e=>{e.preventDefault();try{await accountAction('/api/auth/login');accountStatus.textContent='Signed in.';}catch(err){accountStatus.textContent=err.message;}});
+document.querySelector('#register').addEventListener('click',async()=>{try{await accountAction('/api/auth/register');accountStatus.textContent='Account created and signed in.';}catch(err){accountStatus.textContent=err.message;}});
+document.querySelector('#signout').addEventListener('click',()=>{token='';sessionStorage.removeItem('humanity_token');accountState();});
+document.querySelector('#delete-account').addEventListener('click',async()=>{if(!confirm('Permanently delete this account?'))return;const r=await fetch('/api/auth/me',{method:'DELETE',headers:{Authorization:'Bearer '+token}});if(r.ok){token='';sessionStorage.removeItem('humanity_token');accountState();accountStatus.textContent='Account deleted.';}else accountStatus.textContent='Could not delete account.';});
+if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('/static/sw.js').catch(()=>{});
+function bubble(text,who){const el=document.createElement('div');el.className='msg '+who;el.textContent=text;chat.appendChild(el);el.scrollIntoView({behavior:'smooth',block:'end'});return el;}
+form.addEventListener('submit',async e=>{e.preventDefault();const message=input.value.trim();if(!message)return;
+bubble(message,'user');input.value='';btn.disabled=true;const pending=bubble('Thinking…','bot');
+try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({message,history})});const data=await r.json();if(!r.ok)throw new Error(data.detail||'Request failed');pending.textContent=data.answer;history.push({role:'user',content:message},{role:'assistant',content:data.answer});}
+catch(err){pending.textContent='The model server is unavailable or returned an error. Check the deployment configuration. '+err.message;}
+finally{btn.disabled=false;input.focus();}
+});
+document.querySelector('#clear').addEventListener('click',()=>{history.length=0;chat.replaceChildren();bubble('Chat cleared. What would you like to explore?','bot');});
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
+</script></body></html>

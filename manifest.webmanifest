@@ -1,0 +1,10 @@
+{
+  "name": "Humanity AI",
+  "short_name": "Humanity AI",
+  "description": "Accessible AI assistance for everyone",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#f5f7fa",
+  "icons": [{"src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
+}
