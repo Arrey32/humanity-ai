@@ -2,7 +2,7 @@ services:
   - type: web
     name: humanity-ai
     runtime: docker
-    plan: starter
+    plan: free
     healthCheckPath: /health
     envVars:
       - key: AUTH_REQUIRED
@@ -10,14 +10,12 @@ services:
       - key: AUTH_SECRET
         generateValue: true
       - key: DATABASE_PATH
-        value: /data/humanity_ai.db
+        value: ./data/humanity_ai.db
       - key: STORE_CONVERSATIONS
         value: "false"
       - key: MODEL_BASE_URL
-        sync: false
+        value: https://generativelanguage.googleapis.com/v1beta/openai/
       - key: MODEL_NAME
-        value: qwen3:4b
-    disk:
-      name: humanity-data
-      mountPath: /data
-      sizeGB: 1
+        value: gemini-3.8-flash
+      - key: MODEL_API_KEY
+        sync: false
